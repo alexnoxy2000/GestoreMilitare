@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="it"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#050b14"><title>Nation Manager</title>
+<link rel="icon" href="WhatsAppImage2026-10-16at20.19.18.jpeg" type="image/jpeg">
+<style>
+:root{--bg:#050b14;--pn:#0b1726;--ln:#16324d;--ac:#37d9ff;--tx:#d6eaf7;--mu:#7f9bb0;--ok:#7dff8a;--wn:#ffc247;--er:#ff5a5a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--tx);font:15px system-ui,sans-serif}
+#app{display:flex;flex-direction:column;height:100%;padding-top:env(safe-area-inset-top)}
+header{padding:10px 14px;border-bottom:1px solid var(--ln);display:flex;align-items:center;gap:8px}
+header h1{font-size:16px;margin:0;color:var(--ac);letter-spacing:2px;flex:1;text-transform:uppercase}
+main{flex:1;overflow:auto;padding:12px;-webkit-overflow-scrolling:touch}
+nav{display:flex;border-top:1px solid var(--ln);background:var(--pn);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;background:none;border:0;color:var(--mu);padding:9px 0;font-size:11px}
+nav button b{display:block;font-size:19px;font-weight:400}
+nav button.on{color:var(--ac)}
+button,input,select,textarea{font:inherit;color:var(--tx)}
+.btn{background:#0d2a40;border:1px solid var(--ac);color:var(--ac);padding:8px 12px;border-radius:8px}
+.btn.d{border-color:var(--er);color:var(--er);background:none}
+.btn.s{padding:4px 9px;font-size:13px}
+input,select,textarea{width:100%;background:#071220;border:1px solid var(--ln);border-radius:8px;padding:9px;margin:3px 0 9px}
+label{font-size:12px;color:var(--mu)}
+.card{background:var(--pn);border:1px solid var(--ln);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.card h3{margin:0 0 3px;font-size:15px;color:var(--ac)}.mu{color:var(--mu);font-size:13px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sp{flex:1}
+.bar{height:7px;background:#102236;border-radius:4px;overflow:hidden;margin-top:5px}.bar i{display:block;height:100%;background:var(--ac)}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #102236}
+.kv span:first-child{color:var(--mu)}.kv span:last-child{text-align:right}
+.sec{color:var(--ac);letter-spacing:1px;font-size:13px;margin:14px 0 4px;display:flex;align-items:center;gap:8px}.sec b{flex:1}
+.tag{font-size:11px;border:1px solid var(--ln);padding:1px 7px;border-radius:9px;color:var(--mu)}
+#mapw{overflow:auto;border:1px solid var(--ln);border-radius:10px;height:62vh;background:#030810}
+#map{position:relative;width:100%;aspect-ratio:4/3;background-size:100% 100%;touch-action:none;
+ background-image:linear-gradient(var(--ln) 1px,transparent 1px),linear-gradient(90deg,var(--ln) 1px,transparent 1px);background-size:10% 10%}
+.mk{position:absolute;transform:translate(-50%,-50%);font-size:22px;touch-action:none;text-shadow:0 0 6px #000}
+.mk small{position:absolute;top:100%;left:50%;transform:translateX(-50%);font-size:10px;white-space:nowrap;background:#000a;padding:0 3px;border-radius:3px}
+#modal{position:fixed;inset:0;background:#000b;display:none;align-items:flex-end;z-index:9}
+#modal.on{display:flex}#box{background:var(--pn);width:100%;max-height:88vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+#lock{position:fixed;inset:0;background:var(--bg);z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+#lock.on{display:flex}#lock input{width:200px;text-align:center;font-size:22px;letter-spacing:6px}
+.tl{padding-left:12px;border-left:3px solid var(--ln)}
+</style></head><body>
+<div id="lock"><div style="font-size:50px">🔒</div><div id="lt">Console protetta</div><input id="pin" type="password" inputmode="numeric" autocomplete="off"><button class="btn" onclick="unlock()">Sblocca</button><div id="le" class="mu"></div></div>
+<div id="app"><header><h1 id="ttl">Nation Manager</h1><button class="btn s" onclick="menu()">⋯</button></header><main id="main"></main>
+<nav id="nav"></nav></div>
+<div id="modal" onclick="if(event.target===this)closeM()"><div id="box"></div></div>
+<input type="file" id="fi" hidden>
+<script>
+const $=s=>document.querySelector(s),KEY='nation_state_v1',AK='nation_auth_v1';
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num=v=>{const m=String(v??'').replace(',','.').match(/-?\d+(\.\d+)?/);return m?+m[0]:null};
+const GAUGES=['stabilita','soddisfazione'];
+function fresh(){return{nation:'La mia Nazione',sections:[{name:'STATO',items:[['Popolazione','0'],['Stabilità','50%'],['Denaro','0']]},{name:'RISORSE',items:[]}],markers:[],map_image:'',units:[],notes:[],
+ tech:[['Militare','#ff5a5a'],['Risorse','#ffc247'],['Industria','#d68bff'],['Logistica','#6aa0ff'],['Medica','#7dff8a']].map((t,i)=>({id:i+1,name:t[0],desc:'',cost:'',state:'completata',color:t[1],x:0,y:i,req:[]})),
+ spy:{agents:[],ops:[],intel:[]}}}
+let S;try{S=JSON.parse(localStorage.getItem(KEY))||fresh()}catch(e){S=fresh()}
+S.spy=S.spy||{agents:[],ops:[],intel:[]};
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('Memoria piena (immagine troppo grande?)')}};
+let tab='dati';
+const TABS=[['dati','📊','Dati'],['mappa','🗺️','Mappa'],['mil','🎖️','Militare'],['tech','🧬','Tech'],['spy','🕵️','Spie'],['note','📝','Note']];
+function nav(){$('#nav').innerHTML=TABS.map(t=>`<button class="${t[0]==tab?'on':''}" onclick="tab='${t[0]}';render()"><b>${t[1]}</b>${t[2]}</button>`).join('')}
+function openM(h){$('#box').innerHTML=h;$('#modal').classList.add('on')}function closeM(){$('#modal').classList.remove('on')}
+function form(title,fields,obj,onSave,onDel){
+ openM(`<h3 style="color:var(--ac);margin:0 0 10px">${esc(title)}</h3>`+fields.map(f=>{const v=obj[f[0]]??'';const id='f_'+f[0];
+  return `<label>${f[1]}</label>`+(f[2]=='sel'?`<select id="${id}">${f[3].map(o=>`<option ${o==v?'selected':''}>${esc(o)}</option>`).join('')}</select>`:f[2]=='area'?`<textarea id="${id}" rows="5">${esc(v)}</textarea>`:f[2]=='color'?`<input id="${id}" type="color" value="${v||'#37d9ff'}">`:`<input id="${id}" value="${esc(v)}" ${f[2]=='n'?'inputmode="decimal"':''}>`)}).join('')+
+  `<div class="row"><button class="btn sp" id="sv">Salva</button>${onDel?'<button class="btn d" id="dl">Elimina</button>':''}<button class="btn" onclick="closeM()">✕</button></div>`);
+ $('#sv').onclick=()=>{fields.forEach(f=>{obj[f[0]]=$('#f_'+f[0]).value});onSave(obj);save();closeM();render()};
+ if(onDel)$('#dl').onclick=()=>{if(confirm('Eliminare?')){onDel();save();closeM();render()}}}
+function crud(arr,fields,mk,card,title){
+ return `<div class="row" style="margin-bottom:10px"><b class="sp">${arr.length} elementi</b><button class="btn" onclick="edit_('${title}',-1)">＋ Aggiungi</button></div>`+(arr.map((x,i)=>`<div class="card" onclick="edit_('${title}',${i})">${card(x)}</div>`).join('')||'<p class="mu">Nulla ancora.</p>')}
+const COL={
+ mil:{a:()=>S.units,f:[['name','Nome'],['type','Tipo','sel',['fanteria','cavalleria','artiglieria','assedio','navale','riserva','altro']],['count','Effettivi','n'],['level','Livello'],['readiness','Prontezza %','n'],['base','Base'],['upkeep','Mantenimento'],['note','Note','area']]},
+ agents:{a:()=>S.spy.agents,f:[['name','Nome in codice'],['kind','Ruolo'],['skill','Abilità 0-100','n'],['loyalty','Lealtà 0-100','n'],['cover','Copertura'],['base','Posizione'],['status','Stato','sel',['attivo','in missione','infiltrato','in riserva','compromesso','catturato','morto']],['upkeep','Mantenimento'],['note','Note','area']]},
+ ops:{a:()=>S.spy.ops,f:[['name','Operazione'],['kind','Tipo'],['target','Bersaglio'],['agents','Agenti (virgola)'],['status','Stato','sel',['pianificata','in corso','riuscita','fallita','annullata']],['risk','Rischio 0-100','n'],['progress','Avanzamento 0-100','n'],['cost','Costo'],['note','Note','area']]},
+ intel:{a:()=>S.spy.intel,f:[['name','Titolo'],['target','Bersaglio'],['reliability','Affidabilità 0-100','n'],['source','Fonte'],['text','Rapporto','area']]},
+ note:{a:()=>S.notes,f:[['title','Titolo'],['text','Testo','area']]},
+ tech:{a:()=>S.tech,f:[['name','Nome'],['state','Stato','sel',['da fare','in ricerca','completata']],['cost','Costo'],['color','Colore','color'],['desc','Descrizione','area'],['reqs','Requisiti (nomi, virgola)']]}};
+function edit_(k,i){const c=COL[k],arr=c.a();let o=i<0?{}:arr[i];
+ if(k=='tech'){o={...o};o.reqs=(o.req||[]).map(r=>(S.tech.find(t=>t.id==r)||{}).name).filter(Boolean).join(', ')}
+ else o=i<0?o:{...o};
+ if(i<0&&k=='note')o={title:'',text:'',id:Date.now()};
+ form(i<0?'Nuovo':'Modifica',c.f,o,r=>{
+  if(k=='tech'){r.req=(r.reqs||'').split(/[;,]/).map(s=>S.tech.find(t=>t.name.toLowerCase()==s.trim().toLowerCase())).filter(t=>t&&t.id!=r.id).map(t=>t.id);delete r.reqs;
+   if(i<0){r.id=Math.max(0,...S.tech.map(t=>t.id))+1;r.x=1;r.y=S.tech.length}}
+  i<0?arr.push(r):arr[i]=r},i<0?null:()=>arr.splice(i,1))}
+const bar=v=>{const n=Math.max(0,Math.min(100,num(v)||0));return `<div class="bar"><i style="width:${n}%"></i></div>`};
+function render(){nav();$('#ttl').textContent=S.nation;const m=$('#main');
+ if(tab=='dati')m.innerHTML=dati();else if(tab=='mappa'){m.innerHTML=mappa();bindMap()}
+ else if(tab=='mil'){const u=S.units,tot=u.reduce((a,x)=>a+(num(x.count)||0),0),up=u.reduce((a,x)=>a+(num(x.upkeep)||0),0);
+  m.innerHTML=`<div class="card row"><div class="sp"><div class="mu">Effettivi totali</div><h3 style="font-size:22px">${tot.toLocaleString('it')}</h3></div><div><div class="mu">Mantenimento</div><h3 style="font-size:22px">${up||'—'}</h3></div></div>`+
+  crud(u,0,0,x=>`<h3>${esc(x.name)} <span class="tag">${esc(x.type)}</span></h3><div class="mu">${esc(x.count)} effettivi · liv. ${esc(x.level||'-')} · base ${esc(x.base||'-')}</div>${bar(x.readiness)}`,'mil')}
+ else if(tab=='tech'){const by={};S.tech.forEach(t=>by[t.id]=t);
+  m.innerHTML=crud(S.tech,0,0,t=>{const lock=t.state=='da fare'&&(t.req||[]).some(r=>by[r]&&by[r].state!='completata');
+   return `<div class="tl" style="border-color:${t.color}"><h3 style="color:${t.color}">${lock?'🔒 ':t.state=='completata'?'✅ ':t.state=='in ricerca'?'⏳ ':''}${esc(t.name)}</h3><div class="mu">${esc(t.state)}${t.cost?' · '+esc(t.cost):''}${(t.req||[]).length?' · richiede: '+t.req.map(r=>esc((by[r]||{}).name)).join(', '):''}</div>${t.desc?`<div class="mu">${esc(t.desc)}</div>`:''}</div>`},'tech')}
+ else if(tab=='spy'){const sp=window.sp||'agents';
+  const bad=S.spy.ops.filter(o=>o.status=='in corso').flatMap(o=>(o.agents||'').split(/[;,]/).map(s=>s.trim().toLowerCase()).filter(n=>S.spy.agents.some(a=>a.name.toLowerCase()==n&&['compromesso','catturato','morto'].includes(a.status))).map(n=>o.name+': '+n));
+  m.innerHTML=`<div class="row" style="margin-bottom:10px">${[['agents','Agenti'],['ops','Operazioni'],['intel','Intel']].map(t=>`<button class="btn sp ${sp==t[0]?'':'d'}" style="${sp==t[0]?'':'color:var(--mu);border-color:var(--ln)'}" onclick="window.sp='${t[0]}';render()">${t[1]}</button>`).join('')}</div>`+
+  (bad.length?`<div class="card" style="border-color:var(--er);color:var(--er)">⚠️ Agente compromesso in operazione: ${esc(bad.join('; '))}</div>`:'')+
+  crud(0&&0||S.spy[sp],0,0,x=>sp=='agents'?`<h3>${esc(x.name)} <span class="tag">${esc(x.status)}</span></h3><div class="mu">${esc(x.kind)} · ${esc(x.base)} · cop. ${esc(x.cover||'-')}</div><div class="mu">Abilità</div>${bar(x.skill)}<div class="mu">Lealtà</div>${bar(x.loyalty)}`:
+   sp=='ops'?`<h3>${esc(x.name)} <span class="tag">${esc(x.status)}</span></h3><div class="mu">${esc(x.kind)} → ${esc(x.target)} · agenti: ${esc(x.agents)} · rischio ${esc(x.risk)}%</div>${bar(x.progress)}`:
+   `<h3>${esc(x.name)}</h3><div class="mu">${esc(x.target)} · affidabilità ${esc(x.reliability)}% · ${esc(x.source)}</div><div>${esc(x.text)}</div>`,sp)}
+ else m.innerHTML=`<input id="q" placeholder="🔍 Cerca nelle note" oninput="render2()">`+'<div id="nl"></div>',render2()}
+function render2(){const q=($('#q')||{value:''}).value.toLowerCase();if(!$('#nl'))return;
+ $('#nl').innerHTML=`<div class="row" style="margin-bottom:10px"><button class="btn sp" onclick="edit_('note',-1)">＋ Nuova nota</button></div>`+S.notes.map((n,i)=>({n,i})).filter(o=>(o.n.title+o.n.text).toLowerCase().includes(q)).map(o=>`<div class="card" onclick="edit_('note',${o.i})"><h3>${esc(o.n.title||'(senza titolo)')}</h3><div class="mu">${esc((o.n.text||'').slice(0,140))}</div></div>`).join('')}
+// ---- DATI
+function dati(){const g=[];S.sections.forEach(s=>s.items.forEach(it=>{if(GAUGES.some(k=>it[0].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(k))&&num(it[1])!=null)g.push(it)}));
+ return (g.length?g.map(it=>`<div class="card"><div class="row"><span class="sp">${esc(it[0])}</span><b style="color:var(--ac)">${esc(it[1])}</b></div>${bar(it[1])}</div>`).join(''):'')+
+ S.sections.map((s,si)=>`<div class="sec"><b>${esc(s.name)}</b><button class="btn s" onclick="addItem(${si})">＋</button><button class="btn s" onclick="renSec(${si})">✎</button></div><div class="card" style="padding:2px 12px">${s.items.map((it,ii)=>`<div class="kv" onclick="editItem(${si},${ii})"><span>${esc(it[0])}</span><span>${esc(it[1])}</span></div>`).join('')||'<p class="mu">Vuota</p>'}</div>`).join('')+
+ `<div class="row"><button class="btn sp" onclick="addSec()">＋ Sezione</button><button class="btn sp" onclick="importTxt()">📥 Importa rapporto</button></div>`}
+function addSec(){form('Nuova sezione',[['name','Nome']],{},o=>S.sections.push({name:(o.name||'SEZIONE').toUpperCase(),items:[]}))}
+function renSec(i){form('Sezione',[['name','Nome']],{name:S.sections[i].name},o=>S.sections[i].name=o.name.toUpperCase(),()=>S.sections.splice(i,1))}
+function addItem(si){form('Nuova voce',[['k','Nome'],['v','Valore']],{},o=>S.sections[si].items.push([o.k,o.v]))}
+function editItem(si,ii){const it=S.sections[si].items[ii];form('Voce',[['k','Nome'],['v','Valore','area']],{k:it[0],v:it[1]},o=>S.sections[si].items[ii]=[o.k,o.v],()=>S.sections[si].items.splice(ii,1))}
+function parseReport(text){const secs=[];let nation=null,cur=null;
+ for(const raw of text.split('\n')){const s=raw.trim();if(!s||/^[_\-=—~ ]+$/.test(s))continue;let m=s.match(/^\*+\s*(.+?)\s*\*+$/);
+  if(m){cur={name:m[1].toUpperCase(),items:[]};secs.push(cur);continue}
+  if(s.startsWith('_')&&s.endsWith('_')&&cur&&cur.items.length){cur.items.at(-1)[1]=(cur.items.at(-1)[1]+' '+s.replace(/^_+|_+$/g,'')).trim();continue}
+  if(s.includes(':')){const i=s.indexOf(':');if(!cur){cur={name:'STATO',items:[]};secs.push(cur)}cur.items.push([s.slice(0,i).replace(/^\*+/,'').trim(),s.slice(i+1).replace(/\*+$/,'').trim()])}
+  else if(!nation&&!cur)nation=s.replace(/^\*+|\*+$/g,'').trim();else{if(!cur){cur={name:'STATO',items:[]};secs.push(cur)}cur.items.push([s,''])}}
+ return{nation:nation||'Nazione',sections:secs}}
+function importTxt(){form('Importa rapporto (sostituisce i dati)',[['t','Incolla il rapporto','area']],{},o=>{const r=parseReport(o.t||'');if(r.sections.length){S.nation=r.nation;S.sections=r.sections}})}
+// ---- MAPPA
+const ICON={città:'🏙️',miniera:'⛏️',fattoria:'🌾',militare:'🪖',porto:'⚓',industria:'🏭',altro:'📍'};
+const MF=[['name','Nome'],['kind','Tipo','sel',Object.keys(ICON)],['note','Nota','area']];
+let zoom=1;
+function mappa(){return `<div class="row" style="margin-bottom:8px"><button class="btn s" onclick="zm(.5)">＋</button><button class="btn s" onclick="zm(-.5)">－</button><button class="btn s sp" onclick="$('#fi').onchange=mapImg;$('#fi').accept='image/*';$('#fi').click()">🖼️ Sfondo</button><button class="btn s" onclick="S.map_image='';save();render()">✕ sfondo</button></div><p class="mu" style="margin:0 0 6px">Tocca la mappa = nuovo punto · trascina = sposta · tocca un punto = modifica</p><div id="mapw"><div id="map" style="width:${zoom*100}%${S.map_image?`;background-image:url(${S.map_image})`:''}">${S.markers.map((m,i)=>`<div class="mk" data-i="${i}" style="left:${m.x}%;top:${m.y}%">${ICON[m.kind]||'📍'}<small>${esc(m.name)}</small></div>`).join('')}</div></div>`}
+function zm(d){zoom=Math.max(1,Math.min(5,zoom+d));render()}
+function mapImg(e){const f=e.target.files[0];if(!f)return;const im=new Image(),u=URL.createObjectURL(f);im.onload=()=>{const c=document.createElement('canvas'),k=Math.min(1,1600/Math.max(im.width,im.height));c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);S.map_image=c.toDataURL('image/jpeg',.8);save();render()};im.src=u;e.target.value=''}
+function bindMap(){const map=$('#map');let drag=null,moved=false;
+ const pos=e=>{const r=map.getBoundingClientRect();return{x:Math.max(0,Math.min(100,(e.clientX-r.left)/r.width*100)),y:Math.max(0,Math.min(100,(e.clientY-r.top)/r.height*100))}};
+ map.onpointerdown=e=>{const t=e.target.closest('.mk');moved=false;drag=t?{i:+t.dataset.i,el:t,sx:e.clientX,sy:e.clientY}:{add:1,sx:e.clientX,sy:e.clientY,p:pos(e)};if(t)map.setPointerCapture(e.pointerId)};
+ map.onpointermove=e=>{if(!drag||drag.add)return;if(Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>6)moved=true;if(moved){const p=pos(e);drag.el.style.left=p.x+'%';drag.el.style.top=p.y+'%';S.markers[drag.i].x=+p.x.toFixed(1);S.markers[drag.i].y=+p.y.toFixed(1)}};
+ map.onpointerup=e=>{if(!drag)return;const d=drag;drag=null;
+  if(d.add){if(Math.hypot(e.clientX-d.sx,e.clientY-d.sy)<8)form('Nuovo punto',MF,{kind:'città'},o=>S.markers.push({name:o.name||'Punto',kind:o.kind,x:+d.p.x.toFixed(1),y:+d.p.y.toFixed(1),note:o.note}))}
+  else if(moved)save();else{const m=S.markers[d.i];form('Punto',MF,{...m},o=>Object.assign(m,o),()=>S.markers.splice(d.i,1))}}}
+// ---- MENU / SICUREZZA / BACKUP
+async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('nm:'+s));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+const auth=()=>{try{return JSON.parse(localStorage.getItem(AK))||{}}catch(e){return{}}};
+function menu(){const a=auth();openM(`<h3 style="color:var(--ac);margin:0 0 10px">Menu</h3>
+<button class="btn" style="width:100%;margin-bottom:8px" onclick="exp()">⬇️ Esporta backup (JSON)</button>
+<button class="btn" style="width:100%;margin-bottom:8px" onclick="$('#fi').onchange=imp;$('#fi').accept='.json';$('#fi').click()">⬆️ Importa backup (anche nation_state.json di JARVIS)</button>
+<button class="btn" style="width:100%;margin-bottom:8px" onclick="form('Nome nazione',[['n','Nome']],{n:S.nation},o=>S.nation=o.n)">✎ Rinomina nazione</button>
+<button class="btn" style="width:100%;margin-bottom:8px" onclick="setPin()">🔒 ${a.h?'Cambia/rimuovi PIN':'Imposta PIN'}</button>
+${a.h?'<button class="btn" style="width:100%;margin-bottom:8px" onclick="location.reload()">🔐 Blocca ora</button>':''}
+<button class="btn d" style="width:100%" onclick="if(confirm('Cancellare TUTTO?')){S=fresh();save();closeM();render()}">🗑 Azzera dati</button>`)}
+function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='nation_state.json';a.click()}
+function imp(e){const f=e.target.files[0];if(!f)return;f.text().then(t=>{try{const d=JSON.parse(t);if(!d.sections)throw 0;S=Object.assign(fresh(),d);S.spy=Object.assign({agents:[],ops:[],intel:[]},d.spy);
+ S.units=(S.units||[]).map(u=>u);save();closeM();render()}catch(x){alert('File non valido')}});e.target.value=''}
+function setPin(){form('PIN (vuoto = rimuovi)',[['p','Nuovo PIN','']],{},async o=>{if(!o.p){localStorage.removeItem(AK)}else localStorage.setItem(AK,JSON.stringify({h:await sha(o.p)}))})}
+async function unlock(){const a=auth();if(await sha($('#pin').value)==a.h){$('#lock').classList.remove('on');$('#pin').value=''}else{$('#le').textContent='PIN errato';$('#pin').value=''}}
+if(auth().h)$('#lock').classList.add('on');
+$('#pin').addEventListener('keydown',e=>{if(e.key=='Enter')unlock()});
+render();
+</script></body></html>
